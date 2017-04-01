@@ -312,7 +312,6 @@ public class FileClient {
                     throw new IllegalStateException("select fail", e);
                 }
 
-                //throw new IllegalStateException("select fail");
                 if (selectionKey.isWritable()) {
                     if (sendRequest) {
                         try {
@@ -359,7 +358,7 @@ public class FileClient {
                         int p = (int)Math.floor(recvSize*100/fileSize);
                         if(p>percent){
                             percent = p;
-                            Log.e(TAG,"recv percent:"+percent);
+                            Log.d(TAG,"recv percent:"+percent);
                         }
                     }
                     readBuffer.compact();
