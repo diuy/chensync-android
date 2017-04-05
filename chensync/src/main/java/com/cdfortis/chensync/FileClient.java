@@ -38,16 +38,21 @@ public class FileClient {
     private String ip;
     private final int port;
     private final String device;
-
+    private ProgressCallback progress;
     private static final int HEAD_SIZE = 8;
     private static final int TYPE_CHECK = 1;
     private static final int TYPE_UPLOAD = 2;
 
-    public FileClient(String ip, int port, String device) {
+    interface ProgressCallback {
+        void onProgress(int percent);
+    }
+
+    public FileClient(String ip, int port, String device,ProgressCallback progress) {
 
         this.ip = ip;
         this.port = port;
         this.device = device;
+        this.progress = progress;
     }
 
     private byte[] createCheckBody(String folder, List<FileInfo> fileInfos) {
@@ -206,24 +211,24 @@ public class FileClient {
     }
 
     private long uploadFileResult(ByteBuffer byteBuffer) {
-        byte[]bytes = byteBuffer.array();
+        byte[] bytes = byteBuffer.array();
         int offset = byteBuffer.arrayOffset();
 
-        if (bytes[offset] != (byte) 0xcc || bytes[offset+1] != (byte) 0xee)
+        if (bytes[offset] != (byte) 0xcc || bytes[offset + 1] != (byte) 0xee)
             throw new IllegalStateException("sync head is error");
 
-        int result = bytes[offset+2];
-        int size = byteArrayToInt(bytes, offset+4);
+        int result = bytes[offset + 2];
+        int size = byteArrayToInt(bytes, offset + 4);
         if (size <= 0 || size > 1024 * 4)
             throw new IllegalStateException("bad body size:" + size);
 
-        if(byteBuffer.remaining() < size+HEAD_SIZE)
+        if (byteBuffer.remaining() < size + HEAD_SIZE)
             return 0;//body数据还未到
 
         if (result != 0) {
             String reason;
             try {
-                reason = new String(bytes,offset+HEAD_SIZE,size, "GBK");
+                reason = new String(bytes, offset + HEAD_SIZE, size, "GBK");
             } catch (UnsupportedEncodingException e) {
                 throw new IllegalStateException("create string fail", e);
             }
@@ -231,25 +236,25 @@ public class FileClient {
         }
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes,offset+HEAD_SIZE,size), "GBK"));
+            br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bytes, offset + HEAD_SIZE, size), "GBK"));
             String line = br.readLine();
             return Long.parseLong(line);
         } catch (Exception e) {
             throw new IllegalStateException("parse upload result fail", e);
         } finally {
-            byteBuffer.position(size+HEAD_SIZE);
+            byteBuffer.position(size + HEAD_SIZE);
             safeClose(br);
         }
     }
 
-    private void readFile(InputStream inputStream,ByteBuffer byteBuffer) throws IOException {
-        int offset = byteBuffer.arrayOffset()+byteBuffer.position();
+    private void readFile(InputStream inputStream, ByteBuffer byteBuffer) throws IOException {
+        int offset = byteBuffer.arrayOffset() + byteBuffer.position();
         int size = byteBuffer.remaining();
-        int ret = inputStream.read(byteBuffer.array(),offset,size);
-        if(ret<=0)
-            throw new IOException("read file fail:"+ret);
+        int ret = inputStream.read(byteBuffer.array(), offset, size);
+        if (ret <= 0)
+            throw new IOException("read file fail:" + ret);
 
-        byteBuffer.position(byteBuffer.position()+ret);
+        byteBuffer.position(byteBuffer.position() + ret);
     }
 
     void uploadFile(String folder, FileInfo fileInfo) {
@@ -273,7 +278,7 @@ public class FileClient {
 
         Selector selector = null;
         SocketChannel socketChannel = null;
-        SelectionKey selectionKey ;
+        SelectionKey selectionKey;
         try {
             try {
                 socketChannel = SocketChannel.open();
@@ -287,7 +292,7 @@ public class FileClient {
                 selectionKey = socketChannel.register(selector, SelectionKey.OP_CONNECT | SelectionKey.OP_READ);
                 selector.select(10000);
                 socketChannel.finishConnect();
-                selectionKey.interestOps( SelectionKey.OP_WRITE|SelectionKey.OP_READ);
+                selectionKey.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
                 //selectionKey = socketChannel.register(selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
             } catch (Exception e) {
                 throw new IllegalStateException("connect fail:" + ip, e);
@@ -298,7 +303,7 @@ public class FileClient {
             int ret;
             long recvSize = 0;
             ByteBuffer writeBuffer = ByteBuffer.allocate(1024 * 10);
-            ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 4+HEAD_SIZE);
+            ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 4 + HEAD_SIZE);
 
             writeBuffer.put(headBytes);
             writeBuffer.put(bodyBytes);
@@ -319,46 +324,47 @@ public class FileClient {
                         } catch (Exception e) {
                             throw new IllegalStateException("send data fail", e);
                         }
-                        if (!writeBuffer.hasRemaining()){
+                        if (!writeBuffer.hasRemaining()) {
                             writeBuffer.clear();
                             sendRequest = false;
                         }
-                    } else if(sendSize < fileSize) {
+                    } else if (sendSize < fileSize) {
                         try {
-                            readFile(fileInputStream,writeBuffer);
-                        }catch (Exception e){
-                            throw new IllegalStateException("read file fail",e);
+                            readFile(fileInputStream, writeBuffer);
+                        } catch (Exception e) {
+                            throw new IllegalStateException("read file fail", e);
                         }
                         writeBuffer.flip();
                         try {
                             ret = socketChannel.write(writeBuffer);
-                            if(ret>0) {
-                                sendSize+=ret;
+                            if (ret > 0) {
+                                sendSize += ret;
                             }
                         } catch (Exception e) {
                             throw new IllegalStateException("send file data fail", e);
                         }
                         writeBuffer.compact();
-                    }else{
+                    } else {
                         selectionKey.interestOps(SelectionKey.OP_READ);
                     }
                 }
                 if (selectionKey.isReadable()) {
                     try {
                         socketChannel.read(readBuffer);
-                    }catch (Exception e){
-                        throw new IllegalStateException("read data fail",e);
+                    } catch (Exception e) {
+                        throw new IllegalStateException("read data fail", e);
                     }
-                    if(readBuffer.position()<HEAD_SIZE)
+                    if (readBuffer.position() < HEAD_SIZE)
                         continue;
                     readBuffer.flip();
                     long result = uploadFileResult(readBuffer);
-                    if(result>0){
+                    if (result > 0) {
                         recvSize = result;
-                        int p = (int)Math.floor(recvSize*100/fileSize);
-                        if(p>percent){
+                        int p = (int) Math.floor(recvSize * 100 / fileSize);
+                        if (p > percent) {
                             percent = p;
-                            Log.d(TAG,"recv percent:"+percent);
+                            if(progress!=null) progress.onProgress(percent);
+                            Log.d(TAG, "recv percent:" + percent);
                         }
                     }
                     readBuffer.compact();
