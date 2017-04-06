@@ -32,7 +32,7 @@ public class SyncService extends Service {
 
     public static final String MESSAGE_SUCCESS = "success";
 
-    public static final String TAG ="SyncService" ;
+    public static final String TAG = "SyncService";
 
     private List<SyncAsyncTask> tasks = new ArrayList<>();
 
@@ -44,8 +44,8 @@ public class SyncService extends Service {
         return null;
     }
 
-    public static void startActionSync(Context context, String ip,int port,String device,String folder) {
-        if(TextUtils.isEmpty(ip) || port <=0 || port> 65535 || TextUtils.isEmpty(device) || TextUtils.isEmpty(folder))
+    public static void startActionSync(Context context, String ip, int port, String device, String folder) {
+        if (TextUtils.isEmpty(ip) || port <= 0 || port > 65535 || TextUtils.isEmpty(device) || TextUtils.isEmpty(folder))
             throw new IllegalArgumentException("argument not valid");
 
         Intent intent = new Intent(context, SyncService.class);
@@ -57,7 +57,7 @@ public class SyncService extends Service {
         context.startService(intent);
     }
 
-    public static void registerActionStatus(Context context,BroadcastReceiver receiver){
+    public static void registerActionStatus(Context context, BroadcastReceiver receiver) {
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_STATUS);
         context.registerReceiver(receiver, filter);
@@ -73,7 +73,6 @@ public class SyncService extends Service {
     }
 
 
-
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
@@ -85,15 +84,15 @@ public class SyncService extends Service {
         if (ACTION_SYNC.equals(action)) {
             final String folder = intent.getStringExtra(EXTRA_FOLDER);
             final String ip = intent.getStringExtra(EXTRA_SERVER_IP);
-            final int port= intent.getIntExtra(EXTRA_SERVER_PORT,8888);
+            final int port = intent.getIntExtra(EXTRA_SERVER_PORT, 8888);
             final String device = intent.getStringExtra(EXTRA_DEVICE);
-            for(SyncAsyncTask task:tasks){
-                if(TextUtils.equals(task.getFolder(),folder)){
-                    Log.e(TAG,"is running :"+folder);
+            for (SyncAsyncTask task : tasks) {
+                if (TextUtils.equals(task.getFolder(), folder)) {
+                    Log.e(TAG, "is running :" + folder);
                     break;
                 }
             }
-            SyncAsyncTask task = new SyncAsyncTask(ip,port,device,folder);
+            SyncAsyncTask task = new SyncAsyncTask(ip, port, device, folder);
             task.execute();
             tasks.add(task);
         }
@@ -102,74 +101,77 @@ public class SyncService extends Service {
 
     @Override
     public void onDestroy() {
-        for(SyncAsyncTask task:tasks){
+        for (SyncAsyncTask task : tasks) {
             task.cancel(true);
         }
         super.onDestroy();
     }
 
-    private void sendStatus(String folder,String file,int progress,String message){
+    private void sendStatus(String folder, String file, int progress, String message) {
         Intent intent = new Intent();
-        intent.putExtra(EXTRA_FOLDER,folder);
-        intent.putExtra(EXTRA_FILE,file);
-        intent.putExtra(EXTRA_PROGRESS,progress);
-        intent.putExtra(EXTRA_MESSAGE,message);
+        intent.putExtra(EXTRA_FOLDER, folder);
+        intent.putExtra(EXTRA_FILE, file);
+        intent.putExtra(EXTRA_PROGRESS, progress);
+        intent.putExtra(EXTRA_MESSAGE, message);
         intent.setAction(ACTION_STATUS);
         sendBroadcast(intent);
     }
 
-    class SyncAsyncTask extends   AsyncTask<Object,Void,Void> implements FileClient.ProgressCallback{
+    class SyncAsyncTask extends AsyncTask<Object, Void, Void> implements FileClient.ProgressCallback {
         private String ip;
         private int port;
         private String device;
         private String folder;
-        private String fileName="";
+        private String fileName = "";
 
-        public SyncAsyncTask(String ip,int port,String device,String folder){
+        public SyncAsyncTask(String ip, int port, String device, String folder) {
             this.device = device;
             this.folder = folder;
             this.ip = ip;
             this.port = port;
         }
 
-        public String getFolder(){return folder;}
-
-        private void sendStatus(String message){
-            SyncService.this.sendStatus(folder,"",0,message);
+        public String getFolder() {
+            return folder;
         }
 
-        private void sendStatus(String file,int progress){
-            SyncService.this.sendStatus(folder,file,progress,"");
+        private void sendStatus(String message) {
+            if (!isCancelled())
+                SyncService.this.sendStatus(folder, "", 0, message);
         }
 
-        private void sendStatus(String file,String message){
-            SyncService.this.sendStatus(folder,file,0,message);
+        private void sendStatus(String file, int progress) {
+            if (!isCancelled()) SyncService.this.sendStatus(folder, file, progress, "");
+        }
+
+        private void sendStatus(String file, String message) {
+            if (!isCancelled()) SyncService.this.sendStatus(folder, file, 0, message);
         }
 
         @Override
         protected Void doInBackground(Object... params) {
             sendStatus("Search file ...");
             List<FileInfo> fileInfoList = FileManager.getFileInfos(folder);
-            if(fileInfoList.isEmpty()){
-                Log.e(TAG,folder+": is empty");
+            if (fileInfoList.isEmpty()) {
+                Log.e(TAG, folder + ": is empty");
                 sendStatus(MESSAGE_SUCCESS);
                 return null;
             }
-            FileClient fileClient = new FileClient(ip,port,device,this);
+            FileClient fileClient = new FileClient(ip, port, device, this);
 
             try {
                 sendStatus("Check file...");
-                List<String> files =fileClient.checkFile(folder,fileInfoList);
-                Log.e(TAG,"check file:"+folder+",new files:"+files.size());
+                List<String> files = fileClient.checkFile(folder, fileInfoList);
+                Log.e(TAG, "check file:" + folder + ",new files:" + files.size());
 
-                for (String file:files){
-                    FileInfo fileInfo = getFileInfo(fileInfoList,file);
-                    if(fileInfo!=null){
+                for (String file : files) {
+                    FileInfo fileInfo = getFileInfo(fileInfoList, file);
+                    if (fileInfo != null) {
                         fileName = new File(fileInfo.path).getName();
-                        sendStatus(fileName,"Upload...");
-                        Log.e(TAG,"upload file start:"+new File(folder,fileInfo.path).getAbsolutePath()+",size:"+fileInfo.fileSize);
-                        fileClient.uploadFile(folder,fileInfo);
-                        Log.e(TAG,"upload file success:"+new File(folder,fileInfo.path).getAbsolutePath()+",size:"+fileInfo.fileSize);
+                        sendStatus(fileName, "Upload...");
+                        Log.e(TAG, "upload file start:" + new File(folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
+                        fileClient.uploadFile(folder, fileInfo);
+                        Log.e(TAG, "upload file success:" + new File(folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
                     }
                 }
             } catch (Exception e) {
@@ -181,7 +183,7 @@ public class SyncService extends Service {
 
         @Override
         public void onProgress(int percent) {
-            sendStatus(fileName,percent);
+            sendStatus(fileName, percent);
         }
 
         @Override
