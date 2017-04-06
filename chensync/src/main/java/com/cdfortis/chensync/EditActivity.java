@@ -11,11 +11,13 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.UUID;
+
 public class EditActivity extends Activity {
 
     public final static int CODE_EDIT = 1;
-    public final static String EXTRA_FOLDER = "folder";
-
+    public final static String EXTRA_FOLDER = "folderInfo";
+    private FolderInfo folderInfo;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -32,12 +34,12 @@ public class EditActivity extends Activity {
             }
         });
 
-        Folder folder = (Folder) getIntent().getSerializableExtra(EXTRA_FOLDER);
-        if (folder != null) {
-            setItemText(R.id.textIp, folder.ip);
-            setItemText(R.id.textPort, String.valueOf(folder.port));
-            setItemText(R.id.textFolder, folder.folder);
-            setItemText(R.id.textWifi, folder.wifi);
+        folderInfo = (FolderInfo) getIntent().getSerializableExtra(EXTRA_FOLDER);
+        if (folderInfo != null) {
+            setItemText(R.id.textIp, folderInfo.ip);
+            setItemText(R.id.textPort, String.valueOf(folderInfo.port));
+            setItemText(R.id.textFolder, folderInfo.folder);
+            setItemText(R.id.textWifi, folderInfo.wifi);
         } else {
             clearItemText(R.id.textIp);
             clearItemText(R.id.textPort);
@@ -81,7 +83,7 @@ public class EditActivity extends Activity {
         }
 
         if (TextUtils.isEmpty(folder)) {
-            showToast("folder is empty");
+            showToast("folderInfo is empty");
             return;
         }
 
@@ -98,8 +100,12 @@ public class EditActivity extends Activity {
         if (p <= 0 || p > 65535)
             showToast("输入正确的端口号");
 
+        String id =null ;
+        if(this.folderInfo != null)
+            id = this.folderInfo.id;
+
         Intent intent = new Intent();
-        intent.putExtra(EXTRA_FOLDER, new Folder(ip, p, folder, wifi));
-        setResult(RESULT_OK);
+        intent.putExtra(EXTRA_FOLDER, new FolderInfo(id,ip, p, folder, wifi));
+        setResult(RESULT_OK,intent);
     }
 }
