@@ -4,22 +4,24 @@ import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class MainActivity extends Activity {
 
-    private List<Folder> folders = new ArrayList<>();
+    private List<FolderInfo> folderInfos = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +29,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         SyncService.registerActionStatus(this, receiver);
         load();
+        //TODO 刷新
     }
 
     @Override
@@ -59,35 +62,68 @@ public class MainActivity extends Activity {
         startActivityForResult(new Intent(this, EditActivity.class), EditActivity.CODE_EDIT);
     }
 
+    private FolderInfo getFolderInfo(String id){
+        for (FolderInfo folderInfo: folderInfos){
+            if(TextUtils.equals(id,folderInfo.id))
+                return folderInfo;
+        }
+        return null;
+    }
+
+    private boolean hasSameFolder(FolderInfo folderInfo){
+        for(FolderInfo f : folderInfos){
+            if(TextUtils.equals(new File(folderInfo.folder).getAbsolutePath(),new File(f.folder).getAbsolutePath()) &&
+                    TextUtils.equals(f.ip, folderInfo.ip) &&
+                    f.port == folderInfo.port)
+                return true;
+        }
+        return false;
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode == EditActivity.CODE_EDIT && resultCode == RESULT_OK){
-            Folder folder =(Folder) data.getSerializableExtra(EditActivity.EXTRA_FOLDER);
-            if(folder!=null){
-                folders.add(folder);
+            FolderInfo folderInfo =(FolderInfo) data.getSerializableExtra(EditActivity.EXTRA_FOLDER);
+            if(folderInfo == null)
+                return;
+
+            if(hasSameFolder(folderInfo)){
+                Toast.makeText(this,"相同地址包括相同的文件夹",Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            if(TextUtils.isEmpty(folderInfo.id)){
+                folderInfo.id = UUID.randomUUID().toString();
+                folderInfos.add(folderInfo);
                 save();
                 //TODO 刷新
+            }else{
+                FolderInfo fi = getFolderInfo(folderInfo.id);
+                if(fi != null){
+                    fi.copyFrom(folderInfo);
+                    save();
+                    //TODO 刷新
+                }
             }
         }
-        super.onActivityResult(requestCode, resultCode, data);
     }
 
     private void load() {
-        folders.clear();
-        SharedPreferences preferences = this.getSharedPreferences("folders", 0);
-        String str =  preferences.getString("folders","");
+        folderInfos.clear();
+        SharedPreferences preferences = this.getSharedPreferences("folderInfos", 0);
+        String str =  preferences.getString("folderInfos","");
         if(TextUtils.isEmpty(str))
             return;
         try {
             JSONArray array = new JSONArray(str);
             for (int i = 0 ; i< array.length() ; i ++){
                 JSONObject object = array.optJSONObject(i);
-                Folder folder = new Folder();
-                folder.ip = object.optString("ip");
-                folder.port = object.optInt("port",0);
-                folder.folder = object.optString("folder");
-                folder.wifi = object.optString("wifi");
-                folders.add(folder);
+                FolderInfo folderInfo = new FolderInfo();
+                folderInfo.ip = object.optString("ip");
+                folderInfo.port = object.optInt("port",0);
+                folderInfo.folder = object.optString("folderInfo");
+                folderInfo.wifi = object.optString("wifi");
+                folderInfos.add(folderInfo);
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -97,22 +133,22 @@ public class MainActivity extends Activity {
 
     private void save() {
         JSONArray array = new JSONArray();
-        for (Folder folder : folders) {
+        for (FolderInfo folderInfo : folderInfos) {
             JSONObject object = new JSONObject();
             try {
-                object.putOpt("ip", folder.ip);
-                object.putOpt("port", folder.port);
-                object.putOpt("folder", folder.folder);
-                object.putOpt("wifi", folder.wifi);
-                array.put(folder);
+                object.putOpt("ip", folderInfo.ip);
+                object.putOpt("port", folderInfo.port);
+                object.putOpt("folderInfo", folderInfo.folder);
+                object.putOpt("wifi", folderInfo.wifi);
+                array.put(folderInfo);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
         }
         String str = array.toString();
-        SharedPreferences preferences = this.getSharedPreferences("folders",0);
+        SharedPreferences preferences = this.getSharedPreferences("folderInfos",0);
         SharedPreferences.Editor edit = preferences.edit();
-        edit.putString("folders", str);
+        edit.putString("folderInfos", str);
         edit.apply();
     }
 }
