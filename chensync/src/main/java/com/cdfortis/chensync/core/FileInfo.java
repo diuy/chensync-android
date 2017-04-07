@@ -1,4 +1,4 @@
-package com.cdfortis.chensync;
+package com.cdfortis.chensync.core;
 
 /**
  * Created by Diuy on 2017/3/29.

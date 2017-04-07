@@ -1,6 +1,8 @@
-package com.cdfortis.chensync;
+package com.cdfortis.chensync.core;
 
 import android.util.Log;
+
+import com.cdfortis.chensync.core.FileInfo;
 
 import java.io.File;
 import java.util.ArrayList;

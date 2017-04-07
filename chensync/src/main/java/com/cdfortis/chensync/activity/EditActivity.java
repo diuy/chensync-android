@@ -1,6 +1,5 @@
-package com.cdfortis.chensync;
+package com.cdfortis.chensync.activity;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -9,14 +8,12 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import java.util.UUID;
+import com.cdfortis.chensync.FolderInfo;
+import com.cdfortis.chensync.R;
 
-public class EditActivity extends Activity {
+public class EditActivity extends BaseActivity {
 
-    public final static int CODE_EDIT = 1;
-    public final static String EXTRA_FOLDER = "folderInfo";
     private FolderInfo folderInfo;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,7 +31,7 @@ public class EditActivity extends Activity {
             }
         });
 
-        folderInfo = (FolderInfo) getIntent().getSerializableExtra(EXTRA_FOLDER);
+        folderInfo = (FolderInfo) getIntent().getSerializableExtra(EXTRA_FOLDER_INFO);
         if (folderInfo != null) {
             setItemText(R.id.textIp, folderInfo.ip);
             setItemText(R.id.textPort, String.valueOf(folderInfo.port));
@@ -45,26 +42,8 @@ public class EditActivity extends Activity {
             clearItemText(R.id.textPort);
             clearItemText(R.id.textFolder);
             clearItemText(R.id.textWifi);
+            setTitle("添加目录");
         }
-    }
-
-    private void clearItemText(int id) {
-        EditText text = (EditText) findViewById(id);
-        text.setText("");
-    }
-
-    private String getItemText(int id) {
-        EditText text = (EditText) findViewById(id);
-        return text.getText().toString();
-    }
-
-    private void setItemText(int id, String str) {
-        EditText text = (EditText) findViewById(id);
-        text.setText(str);
-    }
-
-    private void showToast(String message) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
     public void onSave(View view) {
@@ -105,7 +84,8 @@ public class EditActivity extends Activity {
             id = this.folderInfo.id;
 
         Intent intent = new Intent();
-        intent.putExtra(EXTRA_FOLDER, new FolderInfo(id,ip, p, folder, wifi));
+        intent.putExtra(EXTRA_FOLDER_INFO, new FolderInfo(id,ip, p, folder, wifi));
         setResult(RESULT_OK,intent);
+        finish();
     }
 }

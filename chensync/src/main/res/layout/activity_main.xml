@@ -8,36 +8,35 @@
     android:background="#918b8585"
     android:orientation="vertical"
     android:paddingTop="4dp"
-    tools:context="com.cdfortis.chensync.MainActivity">
+    tools:context="com.cdfortis.chensync.activity.MainActivity">
 
     <ListView
+        android:id="@+id/listFolder"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="0dp" android:layout_weight="1">
 
     </ListView>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:orientation="horizontal">
+        android:padding="10dp"
+        android:orientation="horizontal" android:background="#aaaaaa">
 
         <Button
+            android:id="@+id/btnAllSync"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="6dp"
-            android:layout_marginRight="3dp"
+            android:layout_marginRight="10dp"
             android:layout_weight="1"
             android:background="#3c3cff"
             android:onClick="onSyncAll"
             android:text="全部同步"
-            android:textColor="@android:color/white"/>
+            android:textColor="@android:color/white" android:visibility="visible"/>
 
         <Button
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="3dp"
-            android:layout_marginRight="6dp"
             android:layout_weight="1"
             android:background="#312e2e"
             android:onClick="onAddFolder"

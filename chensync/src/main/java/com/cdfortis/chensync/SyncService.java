@@ -1,6 +1,5 @@
 package com.cdfortis.chensync;
 
-import android.app.IntentService;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Intent;
@@ -11,26 +10,16 @@ import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
 
-import java.io.Closeable;
+import com.cdfortis.chensync.core.FileClient;
+import com.cdfortis.chensync.core.FileInfo;
+import com.cdfortis.chensync.core.FileManager;
+
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class SyncService extends Service {
-    private static final String ACTION_SYNC = "com.cdfortis.chensync.action.SYNC";
-    private static final String ACTION_STATUS = "com.cdfortis.chensync.action.STATUS";
+public class SyncService extends Service implements ChenConstant {
 
-    public static final String EXTRA_FOLDER = "com.cdfortis.chensync.extra.FOLDER";
-    public static final String EXTRA_SERVER_IP = "com.cdfortis.chensync.extra.SERVER_IP";
-    public static final String EXTRA_SERVER_PORT = "com.cdfortis.chensync.extra.SERVER_PORT";
-    public static final String EXTRA_DEVICE = "com.cdfortis.chensync.extra.DEVICE";
-
-    public static final String EXTRA_FILE = "com.cdfortis.chensync.extra.FILE";
-    public static final String EXTRA_PROGRESS = "com.cdfortis.chensync.extra.PROGRESS";
-    public static final String EXTRA_MESSAGE = "com.cdfortis.chensync.extra.MESSAGE";
-
-    public static final String MESSAGE_SUCCESS = "success";
 
     public static final String TAG = "SyncService";
 
@@ -39,21 +28,32 @@ public class SyncService extends Service {
     public SyncService() {
     }
 
+    private ChenApplication getChenApplication() {
+        return (ChenApplication) getApplication();
+    }
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;
     }
 
-    public static void startActionSync(Context context, String ip, int port, String device, String folder) {
-        if (TextUtils.isEmpty(ip) || port <= 0 || port > 65535 || TextUtils.isEmpty(device) || TextUtils.isEmpty(folder))
+    public static void startSync(Context context, FolderInfo folderInfo) {
+        if (TextUtils.isEmpty(folderInfo.ip) || folderInfo.port <= 0 || folderInfo.port > 65535 || TextUtils.isEmpty(folderInfo.folder))
             throw new IllegalArgumentException("argument not valid");
 
         Intent intent = new Intent(context, SyncService.class);
-        intent.setAction(ACTION_SYNC);
-        intent.putExtra(EXTRA_SERVER_IP, ip);
-        intent.putExtra(EXTRA_SERVER_PORT, port);
-        intent.putExtra(EXTRA_DEVICE, device);
-        intent.putExtra(EXTRA_FOLDER, folder);
+        intent.setAction(ACTION_START_SYNC);
+        intent.putExtra(EXTRA_FOLDER_INFO, folderInfo);
+        context.startService(intent);
+    }
+
+    public static void stopSync(Context context, String folderId) {
+        if (TextUtils.isEmpty(folderId))
+            throw new IllegalArgumentException("argument not valid");
+
+        Intent intent = new Intent(context, SyncService.class);
+        intent.setAction(ACTION_STOP_SYNC);
+        intent.putExtra(EXTRA_FOLDER_ID, folderId);
         context.startService(intent);
     }
 
@@ -72,6 +72,15 @@ public class SyncService extends Service {
         return null;
     }
 
+    private SyncAsyncTask getTask(String folderId) {
+        for (SyncAsyncTask task : tasks) {
+            if (TextUtils.equals(task.getFolderInfo().id, folderId)) {
+                return task;
+            }
+        }
+        return null;
+    }
+
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -81,20 +90,30 @@ public class SyncService extends Service {
         }
 
         final String action = intent.getAction();
-        if (ACTION_SYNC.equals(action)) {
-            final String folder = intent.getStringExtra(EXTRA_FOLDER);
-            final String ip = intent.getStringExtra(EXTRA_SERVER_IP);
-            final int port = intent.getIntExtra(EXTRA_SERVER_PORT, 8888);
-            final String device = intent.getStringExtra(EXTRA_DEVICE);
-            for (SyncAsyncTask task : tasks) {
-                if (TextUtils.equals(task.getFolder(), folder)) {
-                    Log.e(TAG, "is running :" + folder);
-                    break;
+        if (ACTION_START_SYNC.equals(action)) {
+            final FolderInfo folderInfo = (FolderInfo) intent.getSerializableExtra(EXTRA_FOLDER_INFO);
+
+            if (getTask(folderInfo.id) != null) {
+                Log.e(TAG, "is running :" + folderInfo.folder);
+                return super.onStartCommand(intent, flags, startId);
+            }
+            SyncAsyncTask task = new SyncAsyncTask(getChenApplication().getSetting().getDevice(), folderInfo);
+            tasks.add(task);
+            task.execute();
+        } else if (ACTION_STOP_SYNC.equals(action)) {
+            final String folderId = intent.getStringExtra(EXTRA_FOLDER_ID);
+            if (TextUtils.isEmpty(folderId)) {
+                for (SyncAsyncTask task : tasks) {
+                    task.cancel(true);
+                }
+                tasks.clear();
+            } else {
+                SyncAsyncTask task = getTask(folderId);
+                if (task != null) {
+                    task.cancel(true);
+                    tasks.remove(task);
                 }
             }
-            SyncAsyncTask task = new SyncAsyncTask(ip, port, device, folder);
-            task.execute();
-            tasks.add(task);
         }
         return super.onStartCommand(intent, flags, startId);
     }
@@ -104,74 +123,74 @@ public class SyncService extends Service {
         for (SyncAsyncTask task : tasks) {
             task.cancel(true);
         }
+        tasks.clear();
         super.onDestroy();
     }
 
-    private void sendStatus(String folder, String file, int progress, String message) {
+    private void sendStatus(String folderId, String file, int progress, String message) {
         Intent intent = new Intent();
-        intent.putExtra(EXTRA_FOLDER, folder);
-        intent.putExtra(EXTRA_FILE, file);
+        intent.putExtra(EXTRA_FOLDER_ID, folderId);
+        if (!TextUtils.isEmpty(file))
+            intent.putExtra(EXTRA_FILE, file);
         intent.putExtra(EXTRA_PROGRESS, progress);
-        intent.putExtra(EXTRA_MESSAGE, message);
+        if (!TextUtils.isEmpty(message))
+            intent.putExtra(EXTRA_MESSAGE, message);
+
         intent.setAction(ACTION_STATUS);
         sendBroadcast(intent);
     }
 
     class SyncAsyncTask extends AsyncTask<Object, Void, Void> implements FileClient.ProgressCallback {
-        private String ip;
-        private int port;
         private String device;
-        private String folder;
+        private FolderInfo folderInfo;
         private String fileName = "";
 
-        public SyncAsyncTask(String ip, int port, String device, String folder) {
+        SyncAsyncTask(String device, FolderInfo folderInfo) {
             this.device = device;
-            this.folder = folder;
-            this.ip = ip;
-            this.port = port;
+            this.folderInfo = folderInfo;
         }
 
-        public String getFolder() {
-            return folder;
+        public FolderInfo getFolderInfo() {
+            return folderInfo;
         }
 
         private void sendStatus(String message) {
             if (!isCancelled())
-                SyncService.this.sendStatus(folder, "", 0, message);
+                SyncService.this.sendStatus(folderInfo.id, "", 0, message);
         }
 
         private void sendStatus(String file, int progress) {
-            if (!isCancelled()) SyncService.this.sendStatus(folder, file, progress, "");
+            if (!isCancelled()) SyncService.this.sendStatus(folderInfo.id, file, progress, "");
         }
 
         private void sendStatus(String file, String message) {
-            if (!isCancelled()) SyncService.this.sendStatus(folder, file, 0, message);
+            if (!isCancelled()) SyncService.this.sendStatus(folderInfo.id, file, 0, message);
         }
 
         @Override
         protected Void doInBackground(Object... params) {
             sendStatus("Search file ...");
-            List<FileInfo> fileInfoList = FileManager.getFileInfos(folder);
+            List<FileInfo> fileInfoList = FileManager.getFileInfos(folderInfo.folder);
             if (fileInfoList.isEmpty()) {
-                Log.e(TAG, folder + ": is empty");
+                Log.e(TAG, folderInfo.folder + ": is empty");
                 sendStatus(MESSAGE_SUCCESS);
                 return null;
             }
-            FileClient fileClient = new FileClient(ip, port, device, this);
+            FileClient fileClient = new FileClient(folderInfo.ip, folderInfo.port, device, this);
 
             try {
                 sendStatus("Check file...");
-                List<String> files = fileClient.checkFile(folder, fileInfoList);
-                Log.e(TAG, "check file:" + folder + ",new files:" + files.size());
+                List<String> files = fileClient.checkFile(folderInfo.folder, fileInfoList);
+                Log.e(TAG, "check file:" + folderInfo.folder + ",new files:" + files.size());
 
                 for (String file : files) {
                     FileInfo fileInfo = getFileInfo(fileInfoList, file);
                     if (fileInfo != null) {
                         fileName = new File(fileInfo.path).getName();
                         sendStatus(fileName, "Upload...");
-                        Log.e(TAG, "upload file start:" + new File(folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
-                        fileClient.uploadFile(folder, fileInfo);
-                        Log.e(TAG, "upload file success:" + new File(folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
+                        Log.e(TAG, "upload file start:" + new File(folderInfo.folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
+                        fileClient.uploadFile(folderInfo.folder, fileInfo);
+                        Log.e(TAG, "upload file success:" + new File(folderInfo.folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
                     }
                 }
             } catch (Exception e) {
@@ -188,8 +207,11 @@ public class SyncService extends Service {
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            tasks.remove(this);
+            if (tasks.contains(this))
+                tasks.remove(this);
         }
+
+
     }
 
 

@@ -1,8 +1,8 @@
-package com.cdfortis.chensync;
+package com.cdfortis.chensync.core;
 
-import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
+
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -43,7 +43,7 @@ public class FileClient {
     private static final int TYPE_CHECK = 1;
     private static final int TYPE_UPLOAD = 2;
 
-    interface ProgressCallback {
+    public interface ProgressCallback {
         void onProgress(int percent);
     }
 
@@ -55,14 +55,28 @@ public class FileClient {
         this.progress = progress;
     }
 
+    private String wrapFileName(String name){
+        if(TextUtils.isEmpty(name))
+            return name;
+
+        return name.replace(' ','*');
+    }
+
+    private String unwrapFileName(String name){
+        if(TextUtils.isEmpty(name))
+            return name;
+
+        return name.replace('*',' ');
+    }
+
     private byte[] createCheckBody(String folder, List<FileInfo> fileInfos) {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         PrintWriter pw = null;
         try {
             pw = new PrintWriter(new OutputStreamWriter(byteArrayOutputStream, "GBK"));
-            pw.println(device + " " + folder);
+            pw.println(wrapFileName(device )+ " " + wrapFileName(folder));
             for (FileInfo fileInfo : fileInfos) {
-                pw.println(fileInfo.path + " " + fileInfo.fileSize + " " + fileInfo.modifyTime);
+                pw.println(wrapFileName(fileInfo.path) + " " + fileInfo.fileSize + " " + fileInfo.modifyTime);
             }
             pw.flush();
             return byteArrayOutputStream.toByteArray();
@@ -134,7 +148,7 @@ public class FileClient {
             List<String> files = new ArrayList<>();
             String line;
             while ((line = br.readLine()) != null) {
-                files.add(line);
+                files.add(unwrapFileName(line));
             }
             return files;
         } catch (Exception e) {
@@ -144,7 +158,7 @@ public class FileClient {
         }
     }
 
-    List<String> checkFile(String folder, List<FileInfo> fileInfos) {
+    public List<String> checkFile(String folder, List<FileInfo> fileInfos) {
         if (TextUtils.isEmpty(ip)) {
             throw new IllegalArgumentException("ip is empty");
         }
@@ -200,7 +214,7 @@ public class FileClient {
         PrintWriter pw = null;
         try {
             pw = new PrintWriter(new OutputStreamWriter(byteArrayOutputStream, "GBK"));
-            pw.print(device + " " + folder + " " + fileInfo.path + " " + fileInfo.fileSize + " " + fileInfo.modifyTime);
+            pw.print(wrapFileName(device )+ " " + wrapFileName(folder) + " " + wrapFileName(fileInfo.path) + " " + fileInfo.fileSize + " " + fileInfo.modifyTime);
             pw.flush();
             return byteArrayOutputStream.toByteArray();
         } catch (Exception e) {
@@ -257,7 +271,7 @@ public class FileClient {
         byteBuffer.position(byteBuffer.position() + ret);
     }
 
-    void uploadFile(String folder, FileInfo fileInfo) {
+    public void uploadFile(String folder, FileInfo fileInfo) {
         if (TextUtils.isEmpty(folder))
             throw new IllegalArgumentException("folder is empty");
 
