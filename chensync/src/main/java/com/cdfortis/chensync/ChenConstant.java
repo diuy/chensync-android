@@ -14,12 +14,6 @@ public interface ChenConstant {
     String EXTRA_FOLDER_ID = "com.cdfortis.chensync.extra.FOLDER_ID";
     String EXTRA_PATH = "com.cdfortis.chensync.extra.PATH";
 
-    String EXTRA_FILE = "com.cdfortis.chensync.extra.FILE";
-    String EXTRA_PROGRESS = "com.cdfortis.chensync.extra.PROGRESS";
-    String EXTRA_MESSAGE = "com.cdfortis.chensync.extra.MESSAGE";
-
-    String MESSAGE_SUCCESS = "success";
-
     //activity 请求代码
     int CODE_EDIT = 1;
     int CODE_SETTING = 2;

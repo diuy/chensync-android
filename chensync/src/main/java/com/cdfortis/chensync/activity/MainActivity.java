@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -15,19 +16,23 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
-import com.cdfortis.chensync.ChenApplication;
 import com.cdfortis.chensync.ChenConstant;
 import com.cdfortis.chensync.FolderInfo;
+import com.cdfortis.chensync.FolderStatus;
 import com.cdfortis.chensync.R;
 import com.cdfortis.chensync.SyncService;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class MainActivity extends BaseActivity implements View.OnClickListener, AdapterView.OnItemLongClickListener, AdapterView.OnItemClickListener {
 
+    private static final String TAG = "MainActivity";
     private List<FolderInfo> folderInfos;
+    private Map<String, FolderStatus> folderStatus;
+
     private ListView listFolder;
     private FolderListAdapter adapter;
 
@@ -37,7 +42,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
         setContentView(R.layout.activity_main);
         listFolder = (ListView) findViewById(R.id.listFolder);
         folderInfos = getFolderInfos();
-        adapter = new FolderListAdapter(this, folderInfos, this);
+        folderStatus = getFolderStatus();
+        adapter = new FolderListAdapter(this, folderInfos, folderStatus, this);
         listFolder.setAdapter(adapter);
         listFolder.setOnItemLongClickListener(this);
         listFolder.setOnItemClickListener(this);
@@ -63,24 +69,22 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
         @Override
         public void onReceive(Context context, Intent intent) {
             String folderID = intent.getStringExtra(SyncService.EXTRA_FOLDER_ID);
-            String file = intent.getStringExtra(SyncService.EXTRA_FILE);
-            int progress = intent.getIntExtra(SyncService.EXTRA_PROGRESS, 0);
-            String message = intent.getStringExtra(SyncService.EXTRA_MESSAGE);
-            onStatus(folderID, message, file, progress);
+            Log.e(TAG, "onReceive : " + folderID);
+            refreshListView();
         }
     };
 
-    private void onStatus(String folderID, String message, String file, int progress) {
-        adapter.setStatus(folderID, message, file, progress);
-        refreshListView();
-    }
 
     public void onSyncAll(View view) {
         for (FolderInfo folderInfo : folderInfos) {
-            SyncService.startSync(this, folderInfo);
-            adapter.setStatus(folderInfo.id, "start", "", 0);
+            FolderStatus folderStatus = this.getFolderStatus().get(folderInfo.id);
+            if (folderStatus == null || folderStatus.finish != 0) {
+                folderStatus = new FolderStatus();
+                folderStatus.finish = 0;
+                getFolderStatus().put(folderInfo.id, folderStatus);
+                SyncService.startSync(this, folderInfo);
+            }
         }
-
         refreshListView();
     }
 
@@ -89,15 +93,27 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
     }
 
     private void startSync(FolderInfo folderInfo) {
-        SyncService.startSync(this, folderInfo);
-        adapter.setStatus(folderInfo.id, "start", "", 0);
+        FolderStatus folderStatus = this.getFolderStatus().get(folderInfo.id);
+        if (folderStatus == null || folderStatus.finish != 0) {
+            folderStatus = new FolderStatus();
+            folderStatus.finish = 0;
+            getFolderStatus().put(folderInfo.id, folderStatus);
+            SyncService.startSync(this, folderInfo);
+        }
         refreshListView();
-
     }
 
     private void stopSync(String folderId) {
         SyncService.stopSync(this, folderId);
-        adapter.removeStatus(folderId);
+        getFolderStatus().remove(folderId);
+        refreshListView();
+    }
+
+    private void stopAllSync() {
+        for (FolderInfo folderInfo : folderInfos) {
+            SyncService.stopSync(this, folderInfo.id);
+        }
+        this.getFolderStatus().clear();
         refreshListView();
     }
 
@@ -145,7 +161,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
                 }
             }
         } else if (requestCode == ChenConstant.CODE_SETTING && resultCode == RESULT_OK) {
-            stopSync(null);
+            stopAllSync();
         }
     }
 
@@ -193,9 +209,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
                 public void onClick(DialogInterface dialog, int which) {
                     FolderInfo folderInfo = folderInfos.get(position);
                     folderInfos.remove(position);
-                    adapter.removeStatus(folderInfo.id);
                     stopSync(folderInfo.id);
-                    refreshListView();
                 }
             });
             builder.setNegativeButton("否", new DialogInterface.OnClickListener() {

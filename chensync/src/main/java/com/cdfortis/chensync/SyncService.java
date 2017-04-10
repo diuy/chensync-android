@@ -17,6 +17,7 @@ import com.cdfortis.chensync.core.FileManager;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class SyncService extends Service implements ChenConstant {
 
@@ -30,6 +31,10 @@ public class SyncService extends Service implements ChenConstant {
 
     private ChenApplication getChenApplication() {
         return (ChenApplication) getApplication();
+    }
+
+    private Map<String, FolderStatus> getFolderStatus() {
+        return getChenApplication().getFolderStatus();
     }
 
     @Override
@@ -127,15 +132,9 @@ public class SyncService extends Service implements ChenConstant {
         super.onDestroy();
     }
 
-    private void sendStatus(String folderId, String file, int progress, String message) {
+    private void sendStatus(String folderId) {
         Intent intent = new Intent();
         intent.putExtra(EXTRA_FOLDER_ID, folderId);
-        if (!TextUtils.isEmpty(file))
-            intent.putExtra(EXTRA_FILE, file);
-        intent.putExtra(EXTRA_PROGRESS, progress);
-        if (!TextUtils.isEmpty(message))
-            intent.putExtra(EXTRA_MESSAGE, message);
-
         intent.setAction(ACTION_STATUS);
         sendBroadcast(intent);
     }
@@ -143,58 +142,86 @@ public class SyncService extends Service implements ChenConstant {
     class SyncAsyncTask extends AsyncTask<Object, Void, Void> implements FileClient.ProgressCallback {
         private String device;
         private FolderInfo folderInfo;
-        private String fileName = "";
+        private FolderStatus folderStatus;
 
         SyncAsyncTask(String device, FolderInfo folderInfo) {
             this.device = device;
             this.folderInfo = folderInfo;
+            this.folderStatus = getFolderStatus().get(folderInfo.id);
+            if (null == this.folderStatus) {
+                throw new IllegalStateException("no folderStatus id:" + folderInfo.id);
+            }
         }
 
-        public FolderInfo getFolderInfo() {
+        FolderInfo getFolderInfo() {
             return folderInfo;
         }
 
-        private void sendStatus(String message) {
-            if (!isCancelled())
-                SyncService.this.sendStatus(folderInfo.id, "", 0, message);
+        private void setMessage(String message) {
+            if (!isCancelled()) {
+                folderStatus.message = message;
+                sendStatus(folderInfo.id);
+            }
         }
 
-        private void sendStatus(String file, int progress) {
-            if (!isCancelled()) SyncService.this.sendStatus(folderInfo.id, file, progress, "");
+        private void setFileProgress(String message, String file, int fileCount, int fileIndex) {
+            if (!isCancelled()) {
+                folderStatus.message = message;
+                folderStatus.fileCount = fileCount;
+                folderStatus.file = file;
+                folderStatus.fileIndex = fileIndex;
+                sendStatus(folderInfo.id);
+            }
         }
 
-        private void sendStatus(String file, String message) {
-            if (!isCancelled()) SyncService.this.sendStatus(folderInfo.id, file, 0, message);
+        private void setPercent(int percent) {
+            if (!isCancelled()) {
+                folderStatus.percent = percent;
+                sendStatus(folderInfo.id);
+            }
+        }
+
+        private void setFinish(String message, boolean success) {
+            if (!isCancelled()) {
+                folderStatus.message = message;
+                if (success)
+                    folderStatus.finish = 1;
+                else
+                    folderStatus.finish = -1;
+
+                sendStatus(folderInfo.id);
+            }
         }
 
         @Override
         protected Void doInBackground(Object... params) {
-            sendStatus("Search file ...");
+            setMessage("Search file ...");
             List<FileInfo> fileInfoList = FileManager.getFileInfos(folderInfo.folder);
             if (fileInfoList.isEmpty()) {
                 Log.e(TAG, folderInfo.folder + ": is empty");
-                sendStatus(MESSAGE_SUCCESS);
+                setFinish("Success!", true);
                 return null;
             }
             FileClient fileClient = new FileClient(folderInfo.ip, folderInfo.port, device, this);
 
             try {
-                sendStatus("Check file...");
+                setMessage("Check file...");
                 List<String> files = fileClient.checkFile(folderInfo.folder, fileInfoList);
                 Log.e(TAG, "check file:" + folderInfo.folder + ",new files:" + files.size());
-
+                int index = 0;
                 for (String file : files) {
                     FileInfo fileInfo = getFileInfo(fileInfoList, file);
+                    index++;
                     if (fileInfo != null) {
-                        fileName = new File(fileInfo.path).getName();
-                        sendStatus(fileName, "Upload...");
+                        String fileName = new File(fileInfo.path).getName();
+                        setFileProgress("Upload...", fileName, files.size(), index);
                         Log.e(TAG, "upload file start:" + new File(folderInfo.folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
                         fileClient.uploadFile(folderInfo.folder, fileInfo);
                         Log.e(TAG, "upload file success:" + new File(folderInfo.folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
                     }
                 }
             } catch (Exception e) {
-                sendStatus(e.getMessage());
+                setFinish(e.getMessage(), false);
                 e.printStackTrace();
             }
             return null;
@@ -202,7 +229,7 @@ public class SyncService extends Service implements ChenConstant {
 
         @Override
         public void onProgress(int percent) {
-            sendStatus(fileName, percent);
+            setPercent(percent);
         }
 
         @Override

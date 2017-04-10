@@ -96,6 +96,7 @@
             android:id="@+id/btnSync"
             android:layout_width="80dp"
             android:layout_height="wrap_content"
+            android:focusable="false"
             android:text="同步"/>
 
     </LinearLayout>

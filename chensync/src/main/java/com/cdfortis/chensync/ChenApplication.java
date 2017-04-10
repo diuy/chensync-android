@@ -11,7 +11,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Diuy on 2017/4/7.
@@ -21,19 +23,60 @@ import java.util.List;
 public class ChenApplication extends Application {
 
     private final List<FolderInfo> folderInfos = new ArrayList<>();
+    private Map<String, FolderStatus> folderStatus = new HashMap<>();
     private Setting setting;
+
     @Override
     public void onCreate() {
         super.onCreate();
         loadFolders();
         loadSetting();
     }
+
     public List<FolderInfo> getFolderInfos() {
         return folderInfos;
     }
 
+    public Map<String, FolderStatus> getFolderStatus() {
+        return folderStatus;
+    }
+
     public Setting getSetting() {
         return setting;
+    }
+
+    private void loadSetting() {
+        setting = new Setting();
+        SharedPreferences preferences = this.getSharedPreferences(this.getPackageName(), 0);
+        String str = preferences.getString("setting", "");
+        if (!TextUtils.isEmpty(str)) {
+            try {
+                JSONObject object = new JSONObject(str);
+                setting.setDevice(object.optString("device"));
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (TextUtils.isEmpty(setting.getDevice())) {
+            setting.setDevice(Build.MODEL);
+            Log.e("", Build.MODEL);
+        }
+    }
+
+    public void saveSetting() {
+        if (setting == null)
+            return;
+        JSONObject object = new JSONObject();
+        try {
+            object.putOpt("device", setting.getDevice());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        SharedPreferences preferences = this.getSharedPreferences(this.getPackageName(), 0);
+        SharedPreferences.Editor edit = preferences.edit();
+        edit.putString("setting", object.toString());
+        edit.apply();
     }
 
     private void loadFolders() {
@@ -58,41 +101,8 @@ public class ChenApplication extends Application {
         }
     }
 
+
     public void saveFolders() {
-        if (setting == null)
-            return;
-        JSONObject object = new JSONObject();
-        try {
-            object.putOpt("device", setting.getDevice());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        SharedPreferences preferences = this.getSharedPreferences(this.getPackageName(), 0);
-        SharedPreferences.Editor edit = preferences.edit();
-        edit.putString("setting", object.toString());
-        edit.apply();
-    }
-
-    private void loadSetting() {
-        setting = new Setting();
-        SharedPreferences preferences = this.getSharedPreferences(this.getPackageName(), 0);
-        String str = preferences.getString("setting", "");
-        if (!TextUtils.isEmpty(str)){
-            try {
-                JSONObject object = new JSONObject(str);
-                setting.setDevice(object.optString("device"));
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if(TextUtils.isEmpty(setting.getDevice())){
-            setting.setDevice(Build.MODEL);
-            Log.e("",Build.MODEL);
-        }
-    }
-
-    public void saveSetting() {
         JSONArray array = new JSONArray();
         for (FolderInfo folderInfo : folderInfos) {
             JSONObject object = new JSONObject();
@@ -101,7 +111,7 @@ public class ChenApplication extends Application {
                 object.putOpt("port", folderInfo.port);
                 object.putOpt("folderInfo", folderInfo.folder);
                 object.putOpt("wifi", folderInfo.wifi);
-                array.put(folderInfo);
+                array.put(object);
             } catch (JSONException e) {
                 e.printStackTrace();
             }
@@ -112,4 +122,5 @@ public class ChenApplication extends Application {
         edit.putString("folderInfos", str);
         edit.apply();
     }
+
 }
