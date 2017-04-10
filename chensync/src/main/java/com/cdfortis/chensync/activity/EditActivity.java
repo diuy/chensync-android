@@ -19,9 +19,10 @@ public class EditActivity extends BaseActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit);
-
-        EditText text = (EditText) findViewById(R.id.textWifi);
-        text.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        EditText textIp = (EditText) findViewById(R.id.textIp);
+        textIp.requestFocus();
+        EditText textWifi = (EditText) findViewById(R.id.textWifi);
+        textWifi.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == KeyEvent.ACTION_DOWN || actionId == EditorInfo.IME_ACTION_DONE) {
