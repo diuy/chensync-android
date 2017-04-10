@@ -23,15 +23,11 @@ import com.cdfortis.chensync.R;
 import com.cdfortis.chensync.SyncService;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class MainActivity extends BaseActivity implements View.OnClickListener, AdapterView.OnItemLongClickListener, AdapterView.OnItemClickListener {
 
     private static final String TAG = "MainActivity";
-    private List<FolderInfo> folderInfos;
-    private Map<String, FolderStatus> folderStatus;
 
     private ListView listFolder;
     private FolderListAdapter adapter;
@@ -41,9 +37,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         listFolder = (ListView) findViewById(R.id.listFolder);
-        folderInfos = getFolderInfos();
-        folderStatus = getFolderStatus();
-        adapter = new FolderListAdapter(this, folderInfos, folderStatus, this);
+        adapter = new FolderListAdapter(this, getFolderInfos(), getFolderStatuses(), this);
         listFolder.setAdapter(adapter);
         listFolder.setOnItemLongClickListener(this);
         listFolder.setOnItemClickListener(this);
@@ -59,7 +53,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
     private void refreshListView() {
         adapter.notifyDataSetChanged();
-        if (folderInfos.size() > 0)
+        if (getFolderInfos().size() > 0)
             showView(R.id.btnAllSync);
         else
             hideView(R.id.btnAllSync);
@@ -76,12 +70,12 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
 
     public void onSyncAll(View view) {
-        for (FolderInfo folderInfo : folderInfos) {
-            FolderStatus folderStatus = this.getFolderStatus().get(folderInfo.id);
+        for (FolderInfo folderInfo : getFolderInfos()) {
+            FolderStatus folderStatus = this.getFolderStatuses().get(folderInfo.id);
             if (folderStatus == null || folderStatus.finish != 0) {
                 folderStatus = new FolderStatus();
                 folderStatus.finish = 0;
-                getFolderStatus().put(folderInfo.id, folderStatus);
+                getFolderStatuses().put(folderInfo.id, folderStatus);
                 SyncService.startSync(this, folderInfo);
             }
         }
@@ -93,11 +87,11 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
     }
 
     private void startSync(FolderInfo folderInfo) {
-        FolderStatus folderStatus = this.getFolderStatus().get(folderInfo.id);
+        FolderStatus folderStatus = this.getFolderStatuses().get(folderInfo.id);
         if (folderStatus == null || folderStatus.finish != 0) {
             folderStatus = new FolderStatus();
             folderStatus.finish = 0;
-            getFolderStatus().put(folderInfo.id, folderStatus);
+            getFolderStatuses().put(folderInfo.id, folderStatus);
             SyncService.startSync(this, folderInfo);
         }
         refreshListView();
@@ -105,20 +99,20 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
     private void stopSync(String folderId) {
         SyncService.stopSync(this, folderId);
-        getFolderStatus().remove(folderId);
+        getFolderStatuses().remove(folderId);
         refreshListView();
     }
 
     private void stopAllSync() {
-        for (FolderInfo folderInfo : folderInfos) {
+        for (FolderInfo folderInfo : getFolderInfos()) {
             SyncService.stopSync(this, folderInfo.id);
         }
-        this.getFolderStatus().clear();
+        this.getFolderStatuses().clear();
         refreshListView();
     }
 
     private FolderInfo getFolderInfo(String id) {
-        for (FolderInfo folderInfo : folderInfos) {
+        for (FolderInfo folderInfo : getFolderInfos()) {
             if (TextUtils.equals(id, folderInfo.id))
                 return folderInfo;
         }
@@ -126,7 +120,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
     }
 
     private boolean hasSameFolder(FolderInfo folderInfo) {
-        for (FolderInfo f : folderInfos) {
+        for (FolderInfo f : getFolderInfos()) {
             if (TextUtils.equals(new File(folderInfo.folder).getAbsolutePath(), new File(f.folder).getAbsolutePath()) &&
                     TextUtils.equals(f.ip, folderInfo.ip) &&
                     f.port == folderInfo.port)
@@ -149,7 +143,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
             if (TextUtils.isEmpty(folderInfo.id)) {
                 folderInfo.id = UUID.randomUUID().toString();
-                folderInfos.add(folderInfo);
+                getFolderInfos().add(folderInfo);
                 getChenApplication().saveFolders();
                 refreshListView();
             } else {
@@ -198,7 +192,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
     @Override
     public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
-        if (position < folderInfos.size()) {
+        if (position < getFolderInfos().size()) {
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setMessage("是否删除该目录");
@@ -207,8 +201,9 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
             builder.setPositiveButton("是", new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialog, int which) {
-                    FolderInfo folderInfo = folderInfos.get(position);
-                    folderInfos.remove(position);
+                    FolderInfo folderInfo = getFolderInfos().get(position);
+                    getFolderInfos().remove(position);
+                    getChenApplication().saveFolders();
                     stopSync(folderInfo.id);
                 }
             });
@@ -225,10 +220,10 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        if (position < folderInfos.size()) {
+        if (position < getFolderInfos().size()) {
             Intent intent = new Intent(this, EditActivity.class);
-            intent.putExtra(EditActivity.EXTRA_FOLDER_INFO, folderInfos.get(position));
-            startActivityForResult(new Intent(this, EditActivity.class), EditActivity.CODE_EDIT);
+            intent.putExtra(EditActivity.EXTRA_FOLDER_INFO, getFolderInfos().get(position));
+            startActivityForResult(intent,CODE_EDIT);
         }
     }
 }

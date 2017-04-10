@@ -33,8 +33,8 @@ public class SyncService extends Service implements ChenConstant {
         return (ChenApplication) getApplication();
     }
 
-    private Map<String, FolderStatus> getFolderStatus() {
-        return getChenApplication().getFolderStatus();
+    private Map<String, FolderStatus> getFolderStatuses() {
+        return getChenApplication().getFolderStatuses();
     }
 
     @Override
@@ -147,7 +147,7 @@ public class SyncService extends Service implements ChenConstant {
         SyncAsyncTask(String device, FolderInfo folderInfo) {
             this.device = device;
             this.folderInfo = folderInfo;
-            this.folderStatus = getFolderStatus().get(folderInfo.id);
+            this.folderStatus = getFolderStatuses().get(folderInfo.id);
             if (null == this.folderStatus) {
                 throw new IllegalStateException("no folderStatus id:" + folderInfo.id);
             }
@@ -208,6 +208,10 @@ public class SyncService extends Service implements ChenConstant {
                 setMessage("Check file...");
                 List<String> files = fileClient.checkFile(folderInfo.folder, fileInfoList);
                 Log.e(TAG, "check file:" + folderInfo.folder + ",new files:" + files.size());
+                if(files.size()==0){
+                    setFinish("No file to upload,Success!", true);
+                    return null;
+                }
                 int index = 0;
                 for (String file : files) {
                     FileInfo fileInfo = getFileInfo(fileInfoList, file);
@@ -220,6 +224,7 @@ public class SyncService extends Service implements ChenConstant {
                         Log.e(TAG, "upload file success:" + new File(folderInfo.folder, fileInfo.path).getAbsolutePath() + ",size:" + fileInfo.fileSize);
                     }
                 }
+                setFinish("Success!", true);
             } catch (Exception e) {
                 setFinish(e.getMessage(), false);
                 e.printStackTrace();

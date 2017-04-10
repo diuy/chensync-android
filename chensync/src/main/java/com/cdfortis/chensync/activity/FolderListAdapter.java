@@ -15,6 +15,7 @@ import com.cdfortis.chensync.FolderStatus;
 import com.cdfortis.chensync.R;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -25,14 +26,14 @@ import java.util.Map;
 public class FolderListAdapter extends BaseAdapter {
     private LayoutInflater inflater;
     private List<FolderInfo> folderInfos;
-    private Map<String, FolderStatus> folderStatus;
+    private Map<String, FolderStatus> folderStatuses;
     private Context context;
     private View.OnClickListener onClickListener;
 
-    public FolderListAdapter(Context context, List<FolderInfo> folderInfos, Map<String, FolderStatus> folderStatus, View.OnClickListener onClickListener) {
+    public FolderListAdapter(Context context, List<FolderInfo> folderInfos, Map<String, FolderStatus> folderStatuses, View.OnClickListener onClickListener) {
         this.inflater = LayoutInflater.from(context);
         this.folderInfos = folderInfos;
-        this.folderStatus = folderStatus;
+        this.folderStatuses = folderStatuses;
         this.context = context;
         this.onClickListener = onClickListener;
     }
@@ -71,10 +72,13 @@ public class FolderListAdapter extends BaseAdapter {
             holder = (Holder) convertView.getTag();
         }
         FolderInfo folderInfo = folderInfos.get(position);
-        FolderStatus folderStatus = this.folderStatus.get(folderInfo.id);
+        FolderStatus folderStatus = this.folderStatuses.get(folderInfo.id);
 
         holder.textFolder.setText(folderInfo.folder);
-        holder.textWifi.setText(folderInfo.wifi);
+        if (TextUtils.isEmpty(folderInfo.wifi))
+            holder.textWifi.setText("wifi: All");
+        else
+            holder.textWifi.setText("wifi: " + folderInfo.wifi);
         holder.textMessage.setText("");
         holder.textFile.setText("");
         holder.textProgress.setText("");
@@ -83,10 +87,13 @@ public class FolderListAdapter extends BaseAdapter {
         if (folderStatus != null) {
             holder.textMessage.setText(folderStatus.message);
             holder.textFile.setText(folderStatus.file);
-            if (!TextUtils.isEmpty(folderStatus.file))
-                holder.textProgress.setText("" + folderStatus.percent + "%");
+            if (!TextUtils.isEmpty(folderStatus.file)) {
+                holder.textProgress.setText(String.format(Locale.getDefault(), "(%d/%d)--%d%%",
+                        folderStatus.fileIndex,
+                        folderStatus.fileCount, folderStatus.percent));
+            }
             holder.viewStatus.setVisibility(View.VISIBLE);
-        }else{
+        } else {
             holder.viewStatus.setVisibility(View.GONE);
         }
 
@@ -96,10 +103,12 @@ public class FolderListAdapter extends BaseAdapter {
             holder.btnSync.setText("取消");
         }
 
-        if(folderStatus != null && folderStatus.finish == -1){
-            holder.textMessage.setTextColor(0xFFF00000);
-        }else{
+        if(folderStatus == null ||folderStatus.finish ==0 ){
             holder.textMessage.setTextColor(0xFF787878);
+        }else if(folderStatus.finish==1){
+            holder.textMessage.setTextColor(0xFF00B000);
+        }else if (folderStatus.finish==-1){
+            holder.textMessage.setTextColor(0xFFB00000);
         }
 
         return convertView;

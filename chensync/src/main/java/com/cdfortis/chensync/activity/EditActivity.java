@@ -96,10 +96,10 @@ public class EditActivity extends BaseActivity {
             return;
         }
 
-        if (TextUtils.isEmpty(wifi)) {
-            showToast("wifi is empty");
-            return;
-        }
+//        if (TextUtils.isEmpty(wifi)) {
+//            showToast("wifi is empty");
+//            return;
+//        }
         int p = 0;
         try {
             p = Integer.parseInt(port);

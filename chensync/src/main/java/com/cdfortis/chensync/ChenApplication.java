@@ -23,7 +23,7 @@ import java.util.Map;
 public class ChenApplication extends Application {
 
     private final List<FolderInfo> folderInfos = new ArrayList<>();
-    private Map<String, FolderStatus> folderStatus = new HashMap<>();
+    private Map<String, FolderStatus> folderStatuses = new HashMap<>();
     private Setting setting;
 
     @Override
@@ -37,8 +37,8 @@ public class ChenApplication extends Application {
         return folderInfos;
     }
 
-    public Map<String, FolderStatus> getFolderStatus() {
-        return folderStatus;
+    public Map<String, FolderStatus> getFolderStatuses() {
+        return folderStatuses;
     }
 
     public Setting getSetting() {
@@ -90,11 +90,13 @@ public class ChenApplication extends Application {
             for (int i = 0; i < array.length(); i++) {
                 JSONObject object = array.optJSONObject(i);
                 FolderInfo folderInfo = new FolderInfo();
+                folderInfo.id = object.optString("id");
                 folderInfo.ip = object.optString("ip");
                 folderInfo.port = object.optInt("port", 0);
                 folderInfo.folder = object.optString("folderInfo");
                 folderInfo.wifi = object.optString("wifi");
-                folderInfos.add(folderInfo);
+                if (!TextUtils.isEmpty(folderInfo.id))
+                    folderInfos.add(folderInfo);
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -107,6 +109,7 @@ public class ChenApplication extends Application {
         for (FolderInfo folderInfo : folderInfos) {
             JSONObject object = new JSONObject();
             try {
+                object.putOpt("id", folderInfo.id);
                 object.putOpt("ip", folderInfo.ip);
                 object.putOpt("port", folderInfo.port);
                 object.putOpt("folderInfo", folderInfo.folder);

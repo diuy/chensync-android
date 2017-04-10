@@ -33,8 +33,8 @@ public class BaseActivity extends Activity implements ChenConstant {
         return getChenApplication().getSetting();
     }
 
-    protected Map<String, FolderStatus> getFolderStatus() {
-        return getChenApplication().getFolderStatus();
+    protected Map<String, FolderStatus> getFolderStatuses() {
+        return getChenApplication().getFolderStatuses();
     }
 
     protected void showToast(String message) {

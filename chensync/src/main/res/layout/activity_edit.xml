@@ -22,7 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:imeOptions="actionNext"
-        android:inputType="numberDecimal"
+        android:inputType="textUri"
         android:padding="3dp"
         android:text="111.111.111.11"/>
 

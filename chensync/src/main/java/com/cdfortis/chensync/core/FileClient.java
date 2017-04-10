@@ -47,7 +47,7 @@ public class FileClient {
         void onProgress(int percent);
     }
 
-    public FileClient(String ip, int port, String device,ProgressCallback progress) {
+    public FileClient(String ip, int port, String device, ProgressCallback progress) {
 
         this.ip = ip;
         this.port = port;
@@ -55,18 +55,18 @@ public class FileClient {
         this.progress = progress;
     }
 
-    private String wrapFileName(String name){
-        if(TextUtils.isEmpty(name))
+    private String wrapFileName(String name) {
+        if (TextUtils.isEmpty(name))
             return name;
 
-        return name.replace(' ','*');
+        return name.replace(' ', '*');
     }
 
-    private String unwrapFileName(String name){
-        if(TextUtils.isEmpty(name))
+    private String unwrapFileName(String name) {
+        if (TextUtils.isEmpty(name))
             return name;
 
-        return name.replace('*',' ');
+        return name.replace('*', ' ');
     }
 
     private byte[] createCheckBody(String folder, List<FileInfo> fileInfos) {
@@ -74,7 +74,7 @@ public class FileClient {
         PrintWriter pw = null;
         try {
             pw = new PrintWriter(new OutputStreamWriter(byteArrayOutputStream, "GBK"));
-            pw.println(wrapFileName(device )+ " " + wrapFileName(folder));
+            pw.println(wrapFileName(device) + " " + wrapFileName(folder));
             for (FileInfo fileInfo : fileInfos) {
                 pw.println(wrapFileName(fileInfo.path) + " " + fileInfo.fileSize + " " + fileInfo.modifyTime);
             }
@@ -115,40 +115,46 @@ public class FileClient {
 
         int result = headBytes[2];
         int size = byteArrayToInt(headBytes, 4);
-        if (size <= 0 || size > 1024 * 1024 * 10)
+        if (size < 0 || size > 1024 * 1024 * 10)
             throw new IllegalStateException("bad body size:" + size);
 
-        byte[] bodyBytes = new byte[size];
-        int recvSize = 0;
-        while (recvSize < size) {
-            int ret = 0;
-            try {
-                ret = is.read(bodyBytes, recvSize, size - recvSize);
-            } catch (Exception e) {
-                throw new IllegalStateException("read body data fail", e);
+        byte[] bodyBytes = null;
+        if (size > 0) {
+            bodyBytes = new byte[size];
+            int recvSize = 0;
+            while (recvSize < size) {
+                int ret = 0;
+                try {
+                    ret = is.read(bodyBytes, recvSize, size - recvSize);
+                } catch (Exception e) {
+                    throw new IllegalStateException("read body data fail", e);
+                }
+                if (ret <= 0)
+                    throw new IllegalStateException("read body data fail");
+                recvSize += ret;
             }
-            if (ret <= 0)
-                throw new IllegalStateException("read body data fail");
-            recvSize += ret;
         }
 
-
         if (result != 0) {
-            String reason;
-            try {
-                reason = new String(bodyBytes, "GBK");
-            } catch (UnsupportedEncodingException e) {
-                throw new IllegalStateException("create string fail ", e);
+            String reason = "other";
+            if (bodyBytes != null) {
+                try {
+                    reason = new String(bodyBytes, "GBK");
+                } catch (UnsupportedEncodingException e) {
+                    throw new IllegalStateException("create string fail ", e);
+                }
             }
             throw new IllegalStateException("result error:" + result + "\n" + reason);
         }
         BufferedReader br = null;
         try {
-            br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bodyBytes), "GBK"));
             List<String> files = new ArrayList<>();
-            String line;
-            while ((line = br.readLine()) != null) {
-                files.add(unwrapFileName(line));
+            if (bodyBytes != null) {
+                String line;
+                br = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(bodyBytes), "GBK"));
+                while ((line = br.readLine()) != null) {
+                    files.add(unwrapFileName(line));
+                }
             }
             return files;
         } catch (Exception e) {
@@ -214,7 +220,7 @@ public class FileClient {
         PrintWriter pw = null;
         try {
             pw = new PrintWriter(new OutputStreamWriter(byteArrayOutputStream, "GBK"));
-            pw.print(wrapFileName(device )+ " " + wrapFileName(folder) + " " + wrapFileName(fileInfo.path) + " " + fileInfo.fileSize + " " + fileInfo.modifyTime);
+            pw.print(wrapFileName(device) + " " + wrapFileName(folder) + " " + wrapFileName(fileInfo.path) + " " + fileInfo.fileSize + " " + fileInfo.modifyTime);
             pw.flush();
             return byteArrayOutputStream.toByteArray();
         } catch (Exception e) {
@@ -377,7 +383,7 @@ public class FileClient {
                         int p = (int) Math.floor(recvSize * 100 / fileSize);
                         if (p > percent) {
                             percent = p;
-                            if(progress!=null) progress.onProgress(percent);
+                            if (progress != null) progress.onProgress(percent);
                             Log.d(TAG, "recv percent:" + percent);
                         }
                     }
