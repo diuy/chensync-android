@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:tools="http://schemas.android.com/tools"
+              android:id="@+id/activity_directory"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              tools:context="com.cdfortis.chensync.activity.DirectoryActivity">
+
+    <TextView
+        android:id="@+id/textPath"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#f2f4f5"
+        android:padding="5dp"
+        android:text="/sdcard/ddd"/>
+
+    <ListView
+        android:id="@+id/listDirectory"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+    </ListView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#f2f4f5"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="10dp"
+            android:layout_weight="1"
+            android:background="@drawable/button_yes"
+            android:onClick="onAdd"
+            android:text="添加"
+            android:textColor="@android:color/white"
+            android:visibility="visible"/>
+
+        <Button
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@drawable/button_no"
+            android:onClick="onCancel"
+            android:text="取消"
+            android:textColor="@android:color/white"/>
+    </LinearLayout>
+
+
+</LinearLayout>

@@ -15,13 +15,31 @@ import com.cdfortis.chensync.R;
 public class EditActivity extends BaseActivity {
 
     private FolderInfo folderInfo;
+    private EditText textWifi;
+    private EditText textFolder;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit);
-        EditText textIp = (EditText) findViewById(R.id.textIp);
-        textIp.requestFocus();
-        EditText textWifi = (EditText) findViewById(R.id.textWifi);
+        // EditText textIp = (EditText) findViewById(R.id.textIp);
+        //textIp.requestFocus();
+        textWifi = (EditText) findViewById(R.id.textWifi);
+        textFolder = (EditText) findViewById(R.id.textFolder);
+        textFolder.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus) {
+                    startActivityForResult(new Intent(EditActivity.this, DirectoryActivity.class), CODE_DIRECTORY);
+                }
+            }
+        });
+        textFolder.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivityForResult(new Intent(EditActivity.this, DirectoryActivity.class), CODE_DIRECTORY);
+            }
+        });
         textWifi.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
@@ -44,6 +62,17 @@ public class EditActivity extends BaseActivity {
             clearItemText(R.id.textFolder);
             clearItemText(R.id.textWifi);
             setTitle("添加目录");
+            setItemText(R.id.textPort, "8888");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == CODE_DIRECTORY && resultCode == RESULT_OK) {
+            String path = data.getStringExtra(EXTRA_PATH);
+            if (!TextUtils.isEmpty(path)) {
+                textFolder.setText(path);
+            }
         }
     }
 
@@ -80,13 +109,13 @@ public class EditActivity extends BaseActivity {
         if (p <= 0 || p > 65535)
             showToast("输入正确的端口号");
 
-        String id =null ;
-        if(this.folderInfo != null)
+        String id = null;
+        if (this.folderInfo != null)
             id = this.folderInfo.id;
 
         Intent intent = new Intent();
-        intent.putExtra(EXTRA_FOLDER_INFO, new FolderInfo(id,ip, p, folder, wifi));
-        setResult(RESULT_OK,intent);
+        intent.putExtra(EXTRA_FOLDER_INFO, new FolderInfo(id, ip, p, folder, wifi));
+        setResult(RESULT_OK, intent);
         finish();
     }
 }

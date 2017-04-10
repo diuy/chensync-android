@@ -35,7 +35,8 @@
         android:layout_width="match_parent"
         android:layout_height="3dp"/>
 
-    <LinearLayout android:id="@+id/viewStatus"
+    <LinearLayout
+        android:id="@+id/viewStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">

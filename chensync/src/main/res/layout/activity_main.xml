@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_marginRight="10dp"
             android:layout_weight="1"
-            android:background="#3c3cff"
+            android:background="@drawable/button_yes"
             android:onClick="onSyncAll"
             android:text="全部同步"
             android:textColor="@android:color/white" android:visibility="visible"/>
@@ -38,7 +38,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:background="#312e2e"
+            android:background="@drawable/button_no"
             android:onClick="onAddFolder"
             android:text="添加目录"
             android:textColor="@android:color/white"/>

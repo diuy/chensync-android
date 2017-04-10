@@ -34,5 +34,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="right"
         android:onClick="onSave"
+        android:textColor="@android:color/white"
+        android:background="@drawable/button_yes"
         android:text="保存"/>
 </LinearLayout>

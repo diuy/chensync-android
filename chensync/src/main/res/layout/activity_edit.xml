@@ -78,7 +78,7 @@
         android:imeOptions="actionDone"
         android:inputType="text"
         android:padding="3dp"
-        android:text="best2,best3" />
+        android:text="best2,best3"/>
 
     <Space
         android:layout_width="match_parent"
@@ -88,6 +88,8 @@
         android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_gravity="right"
+        android:background="@drawable/button_yes"
         android:onClick="onSave"
-        android:text="保存"/>
+        android:text="保存"
+        android:textColor="#FFF"/>
 </LinearLayout>
