@@ -5,11 +5,13 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#918b8585"
+    android:background="#FFdcdcdc"
     android:orientation="vertical"
     tools:context="com.cdfortis.chensync.activity.MainActivity">
 
     <ListView
+        android:dividerHeight="4dp"
+        android:divider="#00ffffff"
         android:id="@+id/listFolder"
         android:layout_width="match_parent"
         android:layout_height="0dp" android:layout_weight="1">
@@ -20,7 +22,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:padding="10dp"
-        android:orientation="horizontal" android:background="#aaaaaa">
+        android:orientation="horizontal" android:background="#c8c8c8">
 
         <Button
             android:id="@+id/btnAllSync"

@@ -79,9 +79,6 @@ public class FolderListAdapter extends BaseAdapter {
             holder.textWifi.setText("wifi: All");
         else
             holder.textWifi.setText("wifi: " + folderInfo.wifi);
-        holder.textMessage.setText("");
-        holder.textFile.setText("");
-        holder.textProgress.setText("");
         holder.btnSync.setTag(position);
 
         if (folderStatus != null) {
@@ -91,6 +88,15 @@ public class FolderListAdapter extends BaseAdapter {
                 holder.textProgress.setText(String.format(Locale.getDefault(), "(%d/%d)--%d%%",
                         folderStatus.fileIndex,
                         folderStatus.fileCount, folderStatus.percent));
+            }else{
+                holder.textProgress.setText("");
+            }
+            if (folderStatus.finish == 0) {
+                holder.textMessage.setTextColor(0xFF787878);
+            } else if (folderStatus.finish == 1) {
+                holder.textMessage.setTextColor(0xFF00B000);
+            } else if (folderStatus.finish == -1) {
+                holder.textMessage.setTextColor(0xFFB00000);
             }
             holder.viewStatus.setVisibility(View.VISIBLE);
         } else {
@@ -101,14 +107,6 @@ public class FolderListAdapter extends BaseAdapter {
             holder.btnSync.setText("同步");
         } else {
             holder.btnSync.setText("取消");
-        }
-
-        if(folderStatus == null ||folderStatus.finish ==0 ){
-            holder.textMessage.setTextColor(0xFF787878);
-        }else if(folderStatus.finish==1){
-            holder.textMessage.setTextColor(0xFF00B000);
-        }else if (folderStatus.finish==-1){
-            holder.textMessage.setTextColor(0xFFB00000);
         }
 
         return convertView;

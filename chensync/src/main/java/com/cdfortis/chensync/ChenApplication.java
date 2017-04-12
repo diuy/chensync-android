@@ -1,6 +1,7 @@
 package com.cdfortis.chensync;
 
 import android.app.Application;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.text.TextUtils;
@@ -43,6 +44,11 @@ public class ChenApplication extends Application {
 
     public Setting getSetting() {
         return setting;
+    }
+
+    public void shutdown() {
+        stopService(new Intent(this, SyncService.class));
+
     }
 
     private void loadSetting() {

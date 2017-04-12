@@ -26,6 +26,7 @@ import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Created by Diuy on 2017/3/29.
@@ -252,7 +253,7 @@ public class FileClient {
             } catch (UnsupportedEncodingException e) {
                 throw new IllegalStateException("create string fail", e);
             }
-            throw new IllegalStateException("result error:" + result + "\n" + reason);
+            throw new IllegalStateException(String.format(Locale.getDefault(),"result error(%d):%s",result , reason));
         }
         BufferedReader br = null;
         try {

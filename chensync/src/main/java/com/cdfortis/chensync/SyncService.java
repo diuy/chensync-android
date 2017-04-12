@@ -1,15 +1,19 @@
 package com.cdfortis.chensync;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.Intent;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.AsyncTask;
 import android.os.IBinder;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.cdfortis.chensync.activity.MainActivity;
 import com.cdfortis.chensync.core.FileClient;
 import com.cdfortis.chensync.core.FileInfo;
 import com.cdfortis.chensync.core.FileManager;
@@ -19,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+//TODO 通知烂，wifi,定时
 public class SyncService extends Service implements ChenConstant {
 
 
@@ -86,6 +91,26 @@ public class SyncService extends Service implements ChenConstant {
         return null;
     }
 
+    public void showNotify(String folder,String status) {
+
+        Notification.Builder builder = new Notification.Builder(this);
+
+        PendingIntent pendingIntent =
+                PendingIntent.getActivity(this, 0, new Intent(this,
+                        MainActivity.class).setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_CANCEL_CURRENT);
+
+
+        builder.setSmallIcon(R.mipmap.chen_sync)
+                .setTicker(getString(R.string.app_name) + "开始运行")
+                .setWhen(System.currentTimeMillis())
+                .setContentTitle(new File(folder).getName())
+                .setContentText(status)
+                //.setLargeIcon(new BitmapDrawable().getBitmap())//TODO xc
+                .setContentIntent(pendingIntent)
+                .setOngoing(true);
+
+        startForeground(22222, builder.build());
+    }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -129,6 +154,7 @@ public class SyncService extends Service implements ChenConstant {
             task.cancel(true);
         }
         tasks.clear();
+        stopForeground(true);
         super.onDestroy();
     }
 
@@ -170,6 +196,7 @@ public class SyncService extends Service implements ChenConstant {
                 folderStatus.fileCount = fileCount;
                 folderStatus.file = file;
                 folderStatus.fileIndex = fileIndex;
+                folderStatus.percent = 0;
                 sendStatus(folderInfo.id);
             }
         }
@@ -202,13 +229,14 @@ public class SyncService extends Service implements ChenConstant {
                 setFinish("Success!", true);
                 return null;
             }
+            showNotify(folderInfo.folder,"同步中...");
             FileClient fileClient = new FileClient(folderInfo.ip, folderInfo.port, device, this);
 
             try {
                 setMessage("Check file...");
                 List<String> files = fileClient.checkFile(folderInfo.folder, fileInfoList);
                 Log.e(TAG, "check file:" + folderInfo.folder + ",new files:" + files.size());
-                if(files.size()==0){
+                if (files.size() == 0) {
                     setFinish("No file to upload,Success!", true);
                     return null;
                 }
@@ -225,9 +253,11 @@ public class SyncService extends Service implements ChenConstant {
                     }
                 }
                 setFinish("Success!", true);
+                showNotify(folderInfo.folder,"同步成功");
             } catch (Exception e) {
                 setFinish(e.getMessage(), false);
                 e.printStackTrace();
+                showNotify(folderInfo.folder,"同步失败");
             }
             return null;
         }

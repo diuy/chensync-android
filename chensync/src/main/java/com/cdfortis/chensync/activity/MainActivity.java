@@ -5,7 +5,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
@@ -23,6 +26,7 @@ import com.cdfortis.chensync.R;
 import com.cdfortis.chensync.SyncService;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class MainActivity extends BaseActivity implements View.OnClickListener, AdapterView.OnItemLongClickListener, AdapterView.OnItemClickListener {
@@ -68,15 +72,27 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
         }
     };
 
+    private boolean checkWifiName(String wifiNames) {
+        if (TextUtils.isEmpty(wifiNames))
+            return true;
+        String name = getWifiName();
+        if (TextUtils.isEmpty(name))
+            return false;
+
+        String[] names = wifiNames.split(",");
+        return Arrays.asList(names).contains(name);
+    }
 
     public void onSyncAll(View view) {
         for (FolderInfo folderInfo : getFolderInfos()) {
             FolderStatus folderStatus = this.getFolderStatuses().get(folderInfo.id);
             if (folderStatus == null || folderStatus.finish != 0) {
-                folderStatus = new FolderStatus();
-                folderStatus.finish = 0;
-                getFolderStatuses().put(folderInfo.id, folderStatus);
-                SyncService.startSync(this, folderInfo);
+                if (checkWifiName(folderInfo.wifi)) {
+                    folderStatus = new FolderStatus();
+                    folderStatus.finish = 0;
+                    getFolderStatuses().put(folderInfo.id, folderStatus);
+                    SyncService.startSync(this, folderInfo);
+                }
             }
         }
         refreshListView();
@@ -89,10 +105,14 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
     private void startSync(FolderInfo folderInfo) {
         FolderStatus folderStatus = this.getFolderStatuses().get(folderInfo.id);
         if (folderStatus == null || folderStatus.finish != 0) {
-            folderStatus = new FolderStatus();
-            folderStatus.finish = 0;
-            getFolderStatuses().put(folderInfo.id, folderStatus);
-            SyncService.startSync(this, folderInfo);
+            if (checkWifiName(folderInfo.wifi)) {
+                folderStatus = new FolderStatus();
+                folderStatus.finish = 0;
+                getFolderStatuses().put(folderInfo.id, folderStatus);
+                SyncService.startSync(this, folderInfo);
+            } else {
+                showToast("匹配wifi失败!");
+            }
         }
         refreshListView();
     }
@@ -121,6 +141,8 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
 
     private boolean hasSameFolder(FolderInfo folderInfo) {
         for (FolderInfo f : getFolderInfos()) {
+            if (TextUtils.equals(folderInfo.id, f.id))
+                continue;
             if (TextUtils.equals(new File(folderInfo.folder).getAbsolutePath(), new File(f.folder).getAbsolutePath()) &&
                     TextUtils.equals(f.ip, folderInfo.ip) &&
                     f.port == folderInfo.port)
@@ -223,7 +245,34 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
         if (position < getFolderInfos().size()) {
             Intent intent = new Intent(this, EditActivity.class);
             intent.putExtra(EditActivity.EXTRA_FOLDER_INFO, getFolderInfos().get(position));
-            startActivityForResult(intent,CODE_EDIT);
+            startActivityForResult(intent, CODE_EDIT);
+        }
+    }
+
+    private long lastBackTime = 0;
+
+    @Override
+    public void onBackPressed() {
+
+        long now = SystemClock.uptimeMillis();
+        if (now - lastBackTime < 1500) {
+            getChenApplication().shutdown();
+            finish();
+            android.os.Process.killProcess(android.os.Process.myPid());
+        } else {
+            showToast("再次点击返回键退出");
+            lastBackTime = now;
+        }
+    }
+
+    private String getWifiName() {
+        try {
+            WifiManager wifiMgr = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
+            WifiInfo info = wifiMgr.getConnectionInfo();
+            String name = info != null ? info.getSSID() : null;
+            return name;
+        } catch (Exception e) {
+            return null;
         }
     }
 }
