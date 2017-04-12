@@ -76,9 +76,9 @@ public class FolderListAdapter extends BaseAdapter {
 
         holder.textFolder.setText(folderInfo.folder);
         if (TextUtils.isEmpty(folderInfo.wifi))
-            holder.textWifi.setText("wifi: All");
+            holder.textWifi.setText("WIFI: All");
         else
-            holder.textWifi.setText("wifi: " + folderInfo.wifi);
+            holder.textWifi.setText("WIFI: " + folderInfo.wifi);
         holder.btnSync.setTag(position);
 
         if (folderStatus != null) {

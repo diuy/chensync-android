@@ -5,7 +5,7 @@ package com.cdfortis.chensync;
  * FolderStatus
  */
 public class FolderStatus {
-    public String message = "准备";
+    public String message = "Ready...";
     public int fileCount = 0;
     public int fileIndex = 0;
     public String file = "";

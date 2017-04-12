@@ -145,7 +145,7 @@ public class FileClient {
                     throw new IllegalStateException("create string fail ", e);
                 }
             }
-            throw new IllegalStateException("result error:" + result + "\n" + reason);
+            throw new IllegalStateException(String.format(Locale.getDefault(),"result error(%d):%s",result , reason));
         }
         BufferedReader br = null;
         try {
@@ -284,7 +284,7 @@ public class FileClient {
 
         if (fileInfo == null)
             throw new IllegalArgumentException("fileInfo is null");
-        if (fileInfo.fileSize <= 0 || TextUtils.isEmpty(fileInfo.path))
+        if (fileInfo.fileSize < 0 || TextUtils.isEmpty(fileInfo.path))
             throw new IllegalArgumentException("fileInfo error");
 
         FileInputStream fileInputStream;
@@ -322,7 +322,7 @@ public class FileClient {
             long fileSize = fileInfo.fileSize;
             long sendSize = 0;
             int ret;
-            long recvSize = 0;
+            long recvSize = -1;
             ByteBuffer writeBuffer = ByteBuffer.allocate(1024 * 10);
             ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 4 + HEAD_SIZE);
 
@@ -379,9 +379,9 @@ public class FileClient {
                         continue;
                     readBuffer.flip();
                     long result = uploadFileResult(readBuffer);
-                    if (result > 0) {
+                    if (result >= 0) {
                         recvSize = result;
-                        int p = (int) Math.floor(recvSize * 100 / fileSize);
+                        int p = fileSize>0?(int) Math.floor(recvSize * 100 / fileSize):100;
                         if (p > percent) {
                             percent = p;
                             if (progress != null) progress.onProgress(percent);
