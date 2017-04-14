@@ -19,6 +19,7 @@ import android.widget.Button;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.cdfortis.chensync.BuildConfig;
 import com.cdfortis.chensync.ChenConstant;
 import com.cdfortis.chensync.FolderInfo;
 import com.cdfortis.chensync.FolderStatus;
@@ -47,6 +48,7 @@ public class MainActivity extends BaseActivity implements View.OnClickListener, 
         listFolder.setOnItemClickListener(this);
         refreshListView();
         SyncService.registerActionStatus(this, receiver);
+        setTitle(getTitle()+" "+ BuildConfig.VERSION_NAME);
     }
 
     @Override

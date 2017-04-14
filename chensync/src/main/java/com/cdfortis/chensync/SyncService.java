@@ -91,7 +91,7 @@ public class SyncService extends Service implements ChenConstant {
         return null;
     }
 
-    public void showNotify(String folder,String status) {
+    public void showNotify(String folder,String status,boolean ongoing) {
 
         Notification.Builder builder = new Notification.Builder(this);
 
@@ -107,7 +107,7 @@ public class SyncService extends Service implements ChenConstant {
                 .setContentText(status)
                 //.setLargeIcon(new BitmapDrawable().getBitmap())//TODO xc
                 .setContentIntent(pendingIntent)
-                .setOngoing(true);
+                .setOngoing(ongoing);
 
         startForeground(22222, builder.build());
     }
@@ -154,7 +154,7 @@ public class SyncService extends Service implements ChenConstant {
             task.cancel(true);
         }
         tasks.clear();
-        stopForeground(true);
+        stopForeground(false);
         super.onDestroy();
     }
 
@@ -229,7 +229,7 @@ public class SyncService extends Service implements ChenConstant {
                 setFinish("Success!", true);
                 return null;
             }
-            showNotify(folderInfo.folder,"同步中...");
+            showNotify(folderInfo.folder,"同步中...",true);
             FileClient fileClient = new FileClient(folderInfo.ip, folderInfo.port, device, this);
 
             try {
@@ -253,11 +253,11 @@ public class SyncService extends Service implements ChenConstant {
                     }
                 }
                 setFinish("Success!", true);
-                showNotify(folderInfo.folder,"同步成功");
+                showNotify(folderInfo.folder,"同步成功",false);
             } catch (Exception e) {
                 setFinish(e.getMessage(), false);
                 e.printStackTrace();
-                showNotify(folderInfo.folder,"同步失败");
+                showNotify(folderInfo.folder,"同步失败",false);
             }
             return null;
         }
@@ -269,8 +269,11 @@ public class SyncService extends Service implements ChenConstant {
 
         @Override
         protected void onPostExecute(Void aVoid) {
-            if (tasks.contains(this))
+            if (tasks.contains(this)){
                 tasks.remove(this);
+            }
+            if(tasks.size()<=0)
+                stopSelf();
         }
 
 
